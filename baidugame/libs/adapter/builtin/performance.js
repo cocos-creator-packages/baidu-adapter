@@ -4,16 +4,20 @@ import isDevtool from './util/isDevtool';
 let performance
 
 if (swan.getPerformance) {
-  const wxPerf = swan.getPerformance()
-  const initTime = wxPerf.now()
+  const swanPerf = swan.getPerformance()
+  const initTime = swanPerf.now()
 
-  const clientPerfAdapter = Object.assign({}, wxPerf, {
+  const clientPerfAdapter = Object.assign({}, swanPerf, {
     now: function() {
-      return (wxPerf.now() - initTime) / 1000
+      return (swanPerf.now() - initTime) / 1000
     }
   })
 
-  performance = isDevtool() ? wxPerf : clientPerfAdapter
+  performance = isDevtool() ? swanPerf : clientPerfAdapter
+}
+else {
+  performance = {};
+  performance.now = Date.now;
 }
 
 export default performance

@@ -306,7 +306,7 @@ function downloadRemoteFile (item, callback) {
                 // check and mkdir remote folder has exists
                 ensureDirFor(localPath, function () {
                     // Save to local path
-                    swan.getFileSystemManager().saveFile({
+                    fs.saveFile({
                         tempFilePath: res.tempFilePath,
                         filePath: localPath,
                         success: function (res) {

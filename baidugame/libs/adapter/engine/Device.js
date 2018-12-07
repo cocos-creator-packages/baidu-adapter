@@ -68,10 +68,34 @@ function initSystemInfo () {
     };
 }
 
-initSystemInfo();
-
-window.device = {
+window.__device = {
+    init (cb) {
+        initSystemInfo();
+        // send systemInfo to subDomain
+        if (swan.getOpenDataContext) {
+            swan.getOpenDataContext().postMessage({
+                fromAdapter: true,
+                event: 'systemInfo',
+                info: JSON.stringify(systemInfo),
+            });
+            cb && cb();
+        }
+        else {
+            swan.onMessage(function (data) {
+                if (data.fromAdapter) {
+                    if (data.event === 'systemInfo') {
+                        let info = JSON.parse(data.info);
+                        // info addon systemInfo
+                        Object.assign(info, systemInfo);
+                        Object.assign(systemInfo, info);
+                        
+                        cb && cb();
+                    }
+                }
+            });
+        }
+    },
     getSystemInfo () {
         return systemInfo;
-    },    
+    },
 };

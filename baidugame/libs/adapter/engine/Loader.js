@@ -33,7 +33,7 @@ function loadImage (item) {
 
     // load cc.Texture2D
     var rawUrl = item.rawUrl;
-    var tex = item.texture || new Texture2D();
+    var tex = item.texture || new cc.Texture2D();
     tex._uuid = item.uuid;
     tex.url = rawUrl;
     tex._setRawAsset(rawUrl, false);
