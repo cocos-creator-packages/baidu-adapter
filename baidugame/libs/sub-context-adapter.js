@@ -46,6 +46,7 @@ swan.onMessage(function (data) {
 cc.Canvas.prototype.update = function () {
     if (this._width !== cc.game.canvas.width || this._height !== cc.game.canvas.height) {
         this.applySettings();
+        this.alignWithScreen();
     }
 };
 
