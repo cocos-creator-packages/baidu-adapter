@@ -154,7 +154,7 @@ if (mgr) {
                 };
 
                 let registerTouchEvent;
-                if (sys.browserType === sys.BROWSER_TYPE_WECHAT_GAME_SUB) {
+                if (sys.browserType === sys.BROWSER_TYPE_BAIDU_GAME_SUB) {
                     _touchEventsMap = {
                         onTouchStart: _touchEventsMap.touchstart,
                         onTouchMove: _touchEventsMap.touchmove,
@@ -162,15 +162,16 @@ if (mgr) {
                         onTouchCancel: _touchEventsMap.touchcancel,
                     };
                     registerTouchEvent = function(eventName) {
-                        let handler = _touchEventsMap[eventName];
-                        wx[eventName](function(event) {
-                            if (!event.changedTouches) return;
-                            let pos = selfPointer.getHTMLElementPosition(element);
-                            let body = document.body;
-                            pos.left -= body.scrollLeft || 0;
-                            pos.top -= body.scrollTop || 0;
-                            handler(selfPointer.getTouchesByEvent(event, pos));
-                        });
+                        // TODO: adapt in BAIDU_DEV_TOOL 11.2 version
+                        // let handler = _touchEventsMap[eventName];
+                        // swan[eventName](function(event) {
+                        //     if (!event.changedTouches) return;
+                        //     let pos = selfPointer.getHTMLElementPosition(element);
+                        //     let body = document.body;
+                        //     pos.left -= body.scrollLeft || 0;
+                        //     pos.top -= body.scrollTop || 0;
+                        //     handler(selfPointer.getTouchesByEvent(event, pos));
+                        // });
                     };
                 }
                 else {
@@ -199,6 +200,10 @@ if (mgr) {
             }
 
             this._isRegisterEvent = true;
+        },
+
+        _registerKeyboardEvent () {
+            // baidu_game not support
         },
     });
 }
