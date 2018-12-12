@@ -35,10 +35,7 @@ var binary_format = [
 
 const REGEX = /^\w+:\/\/.*/;
 
-// has sub domain
-var isSubdomain = !swan.getFileSystemManager;
-
-var fs = isSubdomain ? {} : swan.getFileSystemManager();
+var fs = swan.getFileSystemManager ? swan.getFileSystemManager() : {};
 
 var _newAssets = [];
 var SwanDownloader = window.SwanDownloader = function () {
@@ -71,7 +68,7 @@ SwanDownloader.prototype.handle = function (item, callback) {
         }
     }
 
-    if (isSubdomain) {
+    if (cc.sys.browserType === cc.sys.BROWSER_TYPE_BAIDU_GAME_SUB) {
         if (REGEX.test(item.url)) {
             callback(null, null);
             return;

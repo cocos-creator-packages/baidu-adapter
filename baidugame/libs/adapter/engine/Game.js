@@ -1,8 +1,9 @@
 const inputManager = _cc.inputManager;
 const renderer = cc.renderer;
+const game = cc.game;
 var _frameRate = 60;
 
-Object.assign(cc.game, {
+Object.assign(game, {
     setFrameRate (frameRate) {
         _frameRate = frameRate;
         swan.setPreferredFramesPerSecond(frameRate);
@@ -156,11 +157,11 @@ Object.assign(cc.game, {
             document.addEventListener("pageshow", onShown);
         }
 
-        this.on(cc.game.EVENT_HIDE, function () {
-            cc.game.pause();
+        this.on(game.EVENT_HIDE, function () {
+            game.pause();
         });
-        this.on(cc.game.EVENT_SHOW, function () {
-            cc.game.resume();
+        this.on(game.EVENT_SHOW, function () {
+            game.resume();
         });
     },
 });
