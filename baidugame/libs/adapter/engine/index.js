@@ -5,4 +5,5 @@ require('./Editbox');
 require('./Game');
 require('./InputManager');
 require('./Loader');
+require('./Screen');
 require('./Texture2D');
