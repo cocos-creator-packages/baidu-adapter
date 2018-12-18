@@ -162,16 +162,15 @@ if (mgr) {
                         onTouchCancel: _touchEventsMap.touchcancel,
                     };
                     registerTouchEvent = function(eventName) {
-                        // TODO: adapt in BAIDU_DEV_TOOL 11.2 version
-                        // let handler = _touchEventsMap[eventName];
-                        // swan[eventName](function(event) {
-                        //     if (!event.changedTouches) return;
-                        //     let pos = selfPointer.getHTMLElementPosition(element);
-                        //     let body = document.body;
-                        //     pos.left -= body.scrollLeft || 0;
-                        //     pos.top -= body.scrollTop || 0;
-                        //     handler(selfPointer.getTouchesByEvent(event, pos));
-                        // });
+                        let handler = _touchEventsMap[eventName];
+                        swan[eventName](function(event) {
+                            if (!event.changedTouches) return;
+                            let pos = selfPointer.getHTMLElementPosition(element);
+                            let body = document.body;
+                            pos.left -= body.scrollLeft || 0;
+                            pos.top -= body.scrollTop || 0;
+                            handler(selfPointer.getTouchesByEvent(event, pos));
+                        });
                     };
                 }
                 else {
