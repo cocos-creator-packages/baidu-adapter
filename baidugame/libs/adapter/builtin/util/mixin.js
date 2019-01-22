@@ -60,6 +60,8 @@ export function style(obj) {
         height: innerHeight + 'px',
         margin: '0px',
         padding: '0px',
+        removeProperty() {},
+        setProperty() {}
     })
 }
 

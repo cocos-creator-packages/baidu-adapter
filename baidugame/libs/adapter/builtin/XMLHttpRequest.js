@@ -139,7 +139,11 @@ export default class XMLHttpRequest extends EventTarget {
                         }
                     });
                 } else {
-                    this.responseText = data
+                    Object.defineProperty(this, 'responseText', {
+                        enumerable: true,
+                        configurable: true,
+                        value: data
+                    });
                 }
                 _changeReadyState.call(this, XMLHttpRequest.DONE)
                 _triggerEvent.call(this, 'load')

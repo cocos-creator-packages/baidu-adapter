@@ -9,6 +9,7 @@ import Canvas from './Canvas'
 import DocumentElement from './DocumentElement'
 import Body from './Body'
 import './EventIniter/index.js'
+import location from './location';
 
 const events = {}
 
@@ -17,6 +18,8 @@ const document = {
     visibilityState: 'visible', // 'visible' , 'hidden'
     hidden: false,
     fullscreen: true,
+
+    URL: location.href,
 
     location: window.location,
 
