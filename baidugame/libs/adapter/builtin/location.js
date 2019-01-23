@@ -1,6 +1,8 @@
 /* eslint-disable */
 const location = {
   href: 'game.js',
+  search: '',
+  hash: '',
 
   reload() {
   },

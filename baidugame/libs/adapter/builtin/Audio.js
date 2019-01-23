@@ -11,6 +11,27 @@ class AudioMock {
     stop() {}
     seek() {}
     destroy() {}
+
+    onCanplay() {}
+    offCanplay() {}
+    onEnded() {}
+    offEnded() {}
+    onError() {}
+    offError() {}
+    onPause() {}
+    offPause() {}
+    onPlay() {}
+    offPlay() {}
+    onSeeked() {}
+    offSeeked() {}
+    onSeeking() {}
+    offSeeking() {}
+    onStop() {}
+    offStop() {}
+    onTimeUpdate() {}
+    offTimeUpdate() {}
+    offWaiting() {}
+    onWaitin() {}
 }
 
 export default class Audio extends HTMLAudioElement {

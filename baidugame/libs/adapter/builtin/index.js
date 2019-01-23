@@ -2,6 +2,7 @@
 import * as _$window from './window'
 import document from './document'
 import isDevtool from './util/isDevtool';
+import HTMLElement from './HTMLElement'
 
 // Avoid being static analyzed in webpack
 const _window = _$window
@@ -52,6 +53,17 @@ function inject() {
         global.window = global
         global.top = global.parent = global
     }
+}
+
+if (swan.getSharedCanvas) {
+    const sharedCanvas = swan.getSharedCanvas();
+    //     sharedCanvas.__proto__.__proto__ = new HTMLCanvasElement;
+    if (!_window.sharedCanvas) {
+        // 兼容微信
+        _window.sharedCanvas = sharedCanvas;
+    }
+    sharedCanvas.addEventListener = _window.addEventListener;
+    sharedCanvas.removeEventListener = _window.removeEventListener;
 }
 
 if (!GameGlobal.__isAdapterInjected) {
