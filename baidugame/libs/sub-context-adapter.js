@@ -1,9 +1,3 @@
-var settings = window._CCSettings;
-
-cc.director.once(cc.Director.EVENT_BEFORE_SCENE_LOADING, function () {
-    cc.Pipeline.Downloader.PackDownloader._doPreload("BAIDU_SUBDOMAIN", settings.BAIDU_SUBDOMAIN_DATA);
-});
-
 var viewportInMain = {
     x: 0,
     y: 0,
