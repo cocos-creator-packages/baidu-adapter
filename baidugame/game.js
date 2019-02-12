@@ -23,7 +23,7 @@ __device.init(function () {
 
     if (cc.sys.browserType === cc.sys.BROWSER_TYPE_BAIDU_GAME_SUB) {
         var _BAIDU_SUBDOMAIN_DATA = require('src/subdomain.json.js');
-        cc.director.once(cc.Director.EVENT_BEFORE_SCENE_LOADING, function () {
+        cc.game.once(cc.game.EVENT_ENGINE_INITED, function () {
             cc.Pipeline.Downloader.PackDownloader._doPreload("BAIDU_SUBDOMAIN", _BAIDU_SUBDOMAIN_DATA);
         });
 
