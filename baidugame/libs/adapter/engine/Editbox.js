@@ -76,10 +76,22 @@ if (EditBox && EditBox._EditBoxImpl) {
             // Unregister keyboard event listener in old editBoxImpl if keyboard haven't hidden.
             if (_currentEditBoxImpl !== this) {
                 if (_currentEditBoxImpl) {
+                    let self = this;
                     _currentEditBoxImpl._endEditing();
                     swan.offKeyboardConfirm(_currentEditBoxImpl.onKeyboardConfirmCallback);
                     swan.offKeyboardInput(_currentEditBoxImpl.onKeyboardInputCallback);
                     swan.offKeyboardComplete(_currentEditBoxImpl.onKeyboardCompleteCallback);
+                    // Can't show new keyboard if the old one is shown.
+                    swan.hideKeyboard({
+                        success (res) {
+                            self.createInput();  // show new keyboard after hiding the old one.
+                        },
+                        fail (res) {
+                            cc.warn(res.errMsg);
+                        }
+                    });
+                    _currentEditBoxImpl = this;
+                    return;
                 }
                 _currentEditBoxImpl = this;
             }
@@ -130,15 +142,15 @@ if (EditBox && EditBox._EditBoxImpl) {
                 confirmType: getKeyboardReturnType(editBoxImpl._returnType),
                 success: function (res) {
                     editBoxImpl._delegate && editBoxImpl._delegate.editBoxEditingDidBegan && editBoxImpl._delegate.editBoxEditingDidBegan();
+                    swan.onKeyboardConfirm(onKeyboardConfirmCallback);
+                    swan.onKeyboardInput(onKeyboardInputCallback);
+                    swan.onKeyboardComplete(onKeyboardCompleteCallback);
                 },
                 fail: function (res) {
                     cc.warn(res.errMsg);
                     editBoxImpl._endEditing();
                 }
             });
-            swan.onKeyboardConfirm(onKeyboardConfirmCallback);
-            swan.onKeyboardInput(onKeyboardInputCallback);
-            swan.onKeyboardComplete(onKeyboardCompleteCallback);
         },
     });
 }
