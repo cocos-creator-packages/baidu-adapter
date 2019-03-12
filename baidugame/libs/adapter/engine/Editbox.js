@@ -1,8 +1,12 @@
-const EditBox = cc.EditBox;
-
-if (EditBox && EditBox._EditBoxImpl) {
-    var KeyboardReturnType = EditBox.KeyboardReturnType;
-    var _currentEditBoxImpl = null;
+(function () {
+    if (!(cc && cc.EditBox)) {
+        return;
+    }
+    
+    const EditBox = cc.EditBox;
+    const js = cc.js;
+    const KeyboardReturnType = EditBox.KeyboardReturnType;
+    let _currentEditBoxImpl = null;
 
     function getKeyboardReturnType (type) {
         switch (type) {
@@ -21,136 +25,150 @@ if (EditBox && EditBox._EditBoxImpl) {
         return 'done';
     }
 
-    function updateLabelsVisibility(editBox) {
-        let displayText = editBox._impl._text;
-        let textLabel = editBox._textLabel;
-        let placeholderLabel = editBox._placeholderLabel;
-  
-        if (textLabel) {
-            textLabel.node.active = displayText !== '';
-        }
-        if (placeholderLabel) {
-            placeholderLabel.node.active = displayText === '';
-        }
+    function SwanEditBoxImpl () {
+        this._delegate = null;
+        this._editing = false;
+
+        this._eventListeners = {
+            onKeyboardInput: null,
+            onKeyboardConfirm: null,
+            onKeyboardComplete: null,
+        };
     }
 
-    Object.assign(EditBox.prototype, {
-        editBoxEditingDidBegan () {
-            cc.Component.EventHandler.emitEvents(this.editingDidBegan, this);
-            this.node.emit('editing-did-began', this);
-        },
+    js.extend(SwanEditBoxImpl, EditBox._ImplClass);
+    EditBox._ImplClass = SwanEditBoxImpl;
 
-        editBoxEditingDidEnded () {
-            cc.Component.EventHandler.emitEvents(this.editingDidEnded, this);
-            this.node.emit('editing-did-ended', this);
+    Object.assign(SwanEditBoxImpl.prototype, {
+        init (delegate) {
+            if (!delegate) {
+                cc.error('EditBox init failed');
+                return;
+            }
+            this._delegate = delegate;
         },
-
-        _updateStayOnTop () {
-            // baidu_game not support
+    
+        setFocus (value) {
+            if (value) {
+                this.beginEditing();
+            }
+            else {
+                this.endEditing();
+            }
         },
-    });
-
-    Object.assign(EditBox._EditBoxImpl.prototype, {
-        setFocus () {
-            this._beginEditing();
-        },
-
+    
         isFocused () {
             return this._editing;
         },
-
-        setInputMode (inputMode) {
-            this._inputMode = inputMode;
-        },
-
-        _beginEditing () {
-            this.createInput();
-        },
-
-        _endEditing () {
-            this._delegate && this._delegate.editBoxEditingDidEnded();
-            this._editing = false;
-        },
-
-        createInput () {
-            // Unregister keyboard event listener in old editBoxImpl if keyboard haven't hidden.
-            if (_currentEditBoxImpl !== this) {
-                if (_currentEditBoxImpl) {
-                    let self = this;
-                    _currentEditBoxImpl._endEditing();
-                    swan.offKeyboardConfirm(_currentEditBoxImpl.onKeyboardConfirmCallback);
-                    swan.offKeyboardInput(_currentEditBoxImpl.onKeyboardInputCallback);
-                    swan.offKeyboardComplete(_currentEditBoxImpl.onKeyboardCompleteCallback);
-                    // Can't show new keyboard if the old one is shown.
-                    swan.hideKeyboard({
-                        success (res) {
-                            self.createInput();  // show new keyboard after hiding the old one.
-                        },
-                        fail (res) {
-                            cc.warn(res.errMsg);
-                        }
-                    });
-                    _currentEditBoxImpl = this;
-                    return;
-                }
-                _currentEditBoxImpl = this;
+    
+        beginEditing () {
+            // In case multiply register events
+            if (_currentEditBoxImpl === this) {
+                return;
             }
+            let delegate = this._delegate;
+            // handle the old keyboard
+            if (_currentEditBoxImpl) {
+                let currentImplCbs = _currentEditBoxImpl._eventListeners;
+                currentImplCbs.onKeyboardComplete();
 
-            var multiline = this._inputMode === EditBox.InputMode.ANY;
-            var editBoxImpl = this;
-            this._editing = true;
-
-            function onKeyboardConfirmCallback (res) {
-                editBoxImpl._text = res.value;
-                editBoxImpl._delegate && editBoxImpl._delegate.editBoxEditingReturn && editBoxImpl._delegate.editBoxEditingReturn();
-                swan.hideKeyboard({
-                    success: function (res) {
-                        
-                    },
-                    fail: function (res) {
-                        cc.warn(res.errMsg);
-                    }
+                swan.updateKeyboard && swan.updateKeyboard({
+                    value: delegate._string,
                 });
             }
 
-            function onKeyboardInputCallback (res) {        
-                if (res.value.length > editBoxImpl._maxLength) {
-                    res.value = res.value.slice(0, editBoxImpl._maxLength);
+            this._registerKeyboardEvent();
+            this._showKeyboard();
+
+            this._editing = true;
+            _currentEditBoxImpl = this;
+            delegate.editBoxEditingDidBegan();
+        },
+        
+        endEditing () {
+            this._hideKeyboard();
+            let cbs = this._eventListeners;
+            cbs.onKeyboardComplete && cbs.onKeyboardComplete();
+        },
+
+        _registerKeyboardEvent () {
+            let self = this;
+            let delegate = this._delegate;
+            let cbs = this._eventListeners;
+
+            cbs.onKeyboardInput = function (res) {        
+                if (res.value.length > delegate.maxLength) {
+                    res.value = res.value.slice(0, delegate.maxLength);
                 }
-                if (editBoxImpl._delegate && editBoxImpl._delegate.editBoxTextChanged) {
-                    if (editBoxImpl._text !== res.value) {
-                        editBoxImpl._text = res.value;
-                        editBoxImpl._delegate.editBoxTextChanged(editBoxImpl._text);
-                        updateLabelsVisibility(editBoxImpl._delegate);
-                    }
+                if (delegate._string !== res.value) {
+                    delegate.editBoxTextChanged(res.value);
                 }
             }
 
-            function onKeyboardCompleteCallback () {
-                editBoxImpl._endEditing();
-                swan.offKeyboardConfirm(onKeyboardConfirmCallback);
-                swan.offKeyboardInput(onKeyboardInputCallback);
-                swan.offKeyboardComplete(onKeyboardCompleteCallback);
-                _currentEditBoxImpl = null;
+            cbs.onKeyboardConfirm = function (res) {
+                delegate.editBoxEditingReturn();
+                let cbs = self._eventListeners;
+                cbs.onKeyboardComplete && cbs.onKeyboardComplete();
             }
-            
+
+            cbs.onKeyboardComplete = function () {
+                self._editing = false;
+                _currentEditBoxImpl = null;
+                self._unregisterKeyboardEvent();
+                delegate.editBoxEditingDidEnded();
+            }
+
+            swan.onKeyboardInput(cbs.onKeyboardInput);
+            swan.onKeyboardConfirm(cbs.onKeyboardConfirm);
+            swan.onKeyboardComplete(cbs.onKeyboardComplete);
+        },
+
+        _unregisterKeyboardEvent () {
+            let cbs = this._eventListeners;
+
+            if (cbs.onKeyboardInput) {
+                swan.offKeyboardInput(cbs.onKeyboardInput);
+                cbs.onKeyboardInput = null;
+            }
+            if (cbs.onKeyboardConfirm) {
+                swan.offKeyboardConfirm(cbs.onKeyboardConfirm);
+                cbs.onKeyboardConfirm = null;
+            }
+            if (cbs.onKeyboardComplete) {
+                swan.offKeyboardComplete(cbs.onKeyboardComplete);
+                cbs.onKeyboardComplete = null;
+            }
+        },
+
+        _showKeyboard () {
+            let delegate = this._delegate;
+            let multiline = (delegate.inputMode === EditBox.InputMode.ANY);
+
             swan.showKeyboard({
-                defaultValue: editBoxImpl._text,
-                maxLength: editBoxImpl._maxLength,
+                defaultValue: delegate._string,
+                maxLength: delegate.maxLength,
                 multiple: multiline,
-                confirmHold: false,  // hide keyboard mannually by swan.onKeyboardConfirm
-                confirmType: getKeyboardReturnType(editBoxImpl._returnType),
-                success: function (res) {
-                    editBoxImpl._delegate && editBoxImpl._delegate.editBoxEditingDidBegan && editBoxImpl._delegate.editBoxEditingDidBegan();
-                    swan.onKeyboardConfirm(onKeyboardConfirmCallback);
-                    swan.onKeyboardInput(onKeyboardInputCallback);
-                    swan.onKeyboardComplete(onKeyboardCompleteCallback);
+                confirmHold: false,
+                confirmType: getKeyboardReturnType(delegate.returnType),
+                success (res) {
+
                 },
-                fail: function (res) {
+                fail (res) {
                     cc.warn(res.errMsg);
-                    editBoxImpl._endEditing();
                 }
             });
         },
+
+        _hideKeyboard () {
+            swan.hideKeyboard({
+                success (res) {
+                    
+                },
+                fail (res) {
+                    cc.warn(res.errMsg);
+                },
+            });
+        },
     });
-}
+})();
+
