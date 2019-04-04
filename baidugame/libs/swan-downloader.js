@@ -35,7 +35,13 @@ var binary_format = [
 
 const REGEX = /^\w+:\/\/.*/;
 
-var fs = swan.getFileSystemManager ? swan.getFileSystemManager() : {};
+// used to control cache
+var cacheQueue = {};
+var checkNextPeriod = false;
+// cache one per cycle
+var cachePeriod = 100;
+
+var fs = swan.getFileSystemManager ? swan.getFileSystemManager() : null;
 
 var _newAssets = [];
 var SwanDownloader = window.SwanDownloader = function () {
@@ -70,8 +76,7 @@ SwanDownloader.prototype.handle = function (item, callback) {
 
     if (cc.sys.browserType === cc.sys.BROWSER_TYPE_BAIDU_GAME_SUB) {
         if (REGEX.test(item.url)) {
-            callback(null, null);
-            return;
+            return null;
         }
 
         item.url = this.SUBCONTEXT_ROOT + '/' + item.url;
@@ -79,6 +84,11 @@ SwanDownloader.prototype.handle = function (item, callback) {
         if (item.type && non_text_format.indexOf(item.type) !== -1) {
             nextPipe(item, callback);
             return;
+        }
+
+        // if swan.getFileSystemManager is undefined, need to skip
+        if (!fs) {
+            return null;
         }
     }
 
@@ -115,6 +125,10 @@ SwanDownloader.prototype.cleanOldAssets = function () {
 };
 
 function cleanAllFiles(path, newAssets, finish) {
+    if (!fs) {
+        finish('swan.getFileSystemManager is undefined');
+        return;
+    }
     fs.readdir({
         dirPath: path,
         success: function (res) {
@@ -149,13 +163,13 @@ function cleanAllFiles(path, newAssets, finish) {
                     }
                 }
                 else {
-                    finish && finish();
+                    finish();
                 }
 
             })(0);
         },
         fail: function (res) {
-            finish && finish();
+            finish(res ? res.errMsg : 'unknown error');
         },
     });
 }
@@ -178,18 +192,30 @@ function nextPipe(item, callback) {
     var queue = cc.LoadingItems.getQueue(item);
     queue.addListener(item.id, function (item) {
         if (item.error) {
-            fs.unlink({
-                filePath: item.url,
-                success: function () {
-                    cc.log('Load failed, removed local file ' + item.url + ' successfully!');
-                }
-            });
+            if (item.url in cacheQueue) {
+                delete cacheQueue[item.url];
+            }
+            else {
+                fs && fs.unlink({
+                    filePath: item.url,
+                    success: function () {
+                        cc.log('Load failed, removed local file ' + item.url + ' successfully!');
+                    }
+                });
+            }
         }
     });
     callback(null, null);
 }
 
 function readText (item, callback) {
+    if (!fs) {
+        callback({
+            status: 0,
+            errorMessage: 'swan.getFileSystemManager is undefined'
+        });
+        return;
+    }
     var url = item.url;
     var encodingFormat = 'utf8';
     for (var i = 0; i < binary_format.length; i++) {
@@ -204,8 +230,28 @@ function readText (item, callback) {
         filePath: url,
         encoding: encodingFormat,
         success: function (res) {
-            item.states[cc.loader.downloader.id] = cc.Pipeline.ItemState.COMPLETE;
-            callback(null, res.data);
+            var queue = cc.LoadingItems.getQueue(item);
+            queue.addListener(item.id, function (item) {
+                if (item.error) {
+                    fs.unlink({
+                        filePath: url,
+                        success: function () {
+                            cc.log('Load failed, removed local file ' + url + ' successfully!');
+                        }
+                    });
+                }
+            });
+            
+            if (res.data) {
+                item.states[cc.loader.downloader.id] = cc.Pipeline.ItemState.COMPLETE;
+                callback(null, res.data);
+            }
+            else {
+                callback({
+                    status: 0,
+                    errorMessage: "Empty file: " + url
+                });
+            }
         },
         fail: function (res) {
             cc.warn('Read file failed: ' + url);
@@ -224,6 +270,14 @@ function readText (item, callback) {
 }
 
 function readFromLocal (item, callback) {
+    if (!fs) {
+        callback({
+            status: 0,
+            errorMessage: 'swan.getFileSystemManager is undefined'
+        });
+        return;
+    }
+
     var localPath = swan.env.USER_DATA_PATH + '/' + item.url;
 
     // Read from local file cache
@@ -255,9 +309,14 @@ function readFromLocal (item, callback) {
 }
 
 function ensureDirFor (path, callback) {
+    if (!fs) {
+        callback('swan.getFileSystemManager is undefined');
+        return;
+    }
+
     // cc.log('mkdir:' + path);
     var ensureDir = cc.path.dirname(path);
-    if (ensureDir === "wxfile://usr" || ensureDir === "http://usr") {
+    if (ensureDir === "bdfile://usr" || ensureDir === "http://usr") {
         callback();
         return;
     }
@@ -275,6 +334,38 @@ function ensureDirFor (path, callback) {
     });
 }
 
+function cacheAsset (url, localPath) {
+    cacheQueue[url] = localPath;
+
+    if (!checkNextPeriod) {
+        checkNextPeriod = true;
+        function cache () {
+            checkNextPeriod = false;
+            for (var url in cacheQueue) {
+                var localPath = cacheQueue[url];
+                ensureDirFor(localPath, function () {
+                    // Save to local path
+                    fs.saveFile({
+                        tempFilePath: url,
+                        filePath: localPath,
+                        success: function (res) {
+                            cc.log('cache success ' + localPath);
+                        }
+                    });
+                });
+                
+                delete cacheQueue[url];
+                if (!cc.js.isEmptyObject(cacheQueue) && !checkNextPeriod) {
+                    checkNextPeriod = true;
+                    setTimeout(cache, cachePeriod);
+                }
+                return;
+            }
+        };
+        setTimeout(cache, cachePeriod);
+    }
+}
+
 function downloadRemoteFile (item, callback) {
     // Download from remote server
     var relatUrl = item.url;
@@ -290,40 +381,24 @@ function downloadRemoteFile (item, callback) {
     swan.downloadFile({
         url: remoteUrl,
         success: function (res) {
-            if (res.statusCode === 404) {
+            if (res.statusCode === 200 && res.tempFilePath) {
+                // http reading is not cached
+                var temp = res.tempFilePath;
+                item.url = temp;
+                if (item.type && non_text_format.indexOf(item.type) !== -1) {
+                    nextPipe(item, callback);
+                }
+                else {
+                    readText(item, callback);
+                }
+                cacheAsset(temp, swan.env.USER_DATA_PATH + '/' + relatUrl);
+                
+            }
+            else {
                 cc.warn("Download file failed: " + remoteUrl);
                 callback({
                     status: 0,
                     errorMessage: res && res.errMsg ? res.errMsg : "Download file failed: " + remoteUrl
-                });
-            }
-            else if (res.tempFilePath) {
-                // http reading is not cached
-                var localPath = swan.env.USER_DATA_PATH + '/' + relatUrl;
-                // check and mkdir remote folder has exists
-                ensureDirFor(localPath, function () {
-                    // Save to local path
-                    fs.saveFile({
-                        tempFilePath: res.tempFilePath,
-                        filePath: localPath,
-                        success: function (res) {
-                            // cc.log('save:' + localPath);
-                            item.url = res.savedFilePath;
-                            if (item.type && non_text_format.indexOf(item.type) !== -1) {
-                                nextPipe(item, callback);
-                            }
-                            else {
-                                readText(item, callback);
-                            }
-                        },
-                        fail: function (res) {
-                            // Failed to save file, then just use remote url
-                            callback({
-                                status: 0,
-                                errorMessage: res && res.errMsg ? res.errMsg : "Download file failed: " + remoteUrl
-                            }, null);
-                        }
-                    });
                 });
             }
         },
@@ -334,7 +409,7 @@ function downloadRemoteFile (item, callback) {
                 errorMessage: res && res.errMsg ? res.errMsg : "Download file failed: " + remoteUrl
             }, null);
         }
-    })
+    });
 }
 
 // function downloadRemoteTextFile (item, callback) {
