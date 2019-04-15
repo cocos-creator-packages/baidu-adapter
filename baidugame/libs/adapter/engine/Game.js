@@ -1,12 +1,37 @@
 const inputManager = _cc.inputManager;
 const renderer = cc.renderer;
 const game = cc.game;
-var _frameRate = 60;
+let _frameRate = 60;
 
 Object.assign(game, {
     setFrameRate (frameRate) {
         _frameRate = frameRate;
-        swan.setPreferredFramesPerSecond(frameRate);
+        if (swan.setPreferredFramesPerSecond) {
+            swan.setPreferredFramesPerSecond(frameRate);
+        }
+        else {
+            if (this._intervalId) {
+                window.cancelAnimFrame(this._intervalId);
+            }
+            this._intervalId = 0;
+            this._paused = true;
+            this._setAnimFrame();
+            this._runMainLoop();
+        }
+    },
+
+    _setAnimFrame () {
+        this._lastTime = performance.now();
+        this._frameTime = 1000 / _frameRate;
+    
+        if (_frameRate !== 60 && _frameRate !== 30) {
+            window.requestAnimFrame = this._stTime;
+            window.cancelAnimFrame = this._ctTime;
+        }
+        else {
+            window.requestAnimFrame = window.requestAnimationFrame || this._stTime;
+            window.cancelAnimFrame = window.cancelAnimationFrame || this._ctTime;
+        }
     },
 
     getFrameRate () {
@@ -23,6 +48,11 @@ Object.assign(game, {
         callback = function () {
             if (!self._paused) {
                 self._intervalId = window.requestAnimFrame(callback);
+                if (_frameRate === 30) {
+                    if (skip = !skip) {
+                        return;
+                    }
+                }
                 director.mainLoop();
             }
         };
