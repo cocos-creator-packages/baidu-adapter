@@ -345,9 +345,9 @@ function cacheAsset (url, localPath) {
                 var localPath = cacheQueue[url];
                 ensureDirFor(localPath, function () {
                     // Save to local path
-                    fs.saveFile({
-                        tempFilePath: url,
-                        filePath: localPath,
+                    fs.copyFile({
+                        srcPath: url,
+                        destPath: localPath,
                         success: function (res) {
                             cc.log('cache success ' + localPath);
                         }
