@@ -41,11 +41,28 @@ function loadImage (item) {
     return tex;
 }
 
+function downloadAudio (item, callback) {
+    if (cc.sys.__audioSupport.format.length === 0) {
+        return new Error(debug.getError(4927));
+    }
+
+    var dom = document.createElement('audio');
+    dom.src = item.url;
+
+    callback(null, dom);
+}
+
 cc.loader.downloader.addHandlers({
     js : downloadScript,
 
     pvr: cc.loader.downloader.extMap.png,
     etc: cc.loader.downloader.extMap.png,
+
+    // Audio
+    mp3 : downloadAudio,
+    ogg : downloadAudio,
+    wav : downloadAudio,
+    m4a : downloadAudio,
 });
 
 cc.loader.loader.addHandlers({
