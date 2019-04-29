@@ -4,7 +4,6 @@ function DeviceMotionEvent() {
     this.accelerationIncludingGravity = null;
 }
 
-
 var registerFunc = _cc.inputManager._registerAccelerometerEvent.bind(_cc.inputManager);
 _cc.inputManager._registerAccelerometerEvent = function () {
   // register engine AccelerationEventListener to get acceleration data from wx
@@ -18,23 +17,23 @@ _cc.inputManager._registerAccelerometerEvent = function () {
     resCpy.z = res.z;
 
     var gravityFactor = 10;
+    var tmp = resCpy.x;
+    resCpy.x = resCpy.y;
+    resCpy.y = tmp;
+
     var systemInfo = swan.getSystemInfoSync();
     var windowWidth = systemInfo.windowWidth;
     var windowHeight = systemInfo.windowHeight;
     if (windowHeight < windowWidth) {
       // landscape view
-      var tmp = resCpy.x;
-      resCpy.x = resCpy.y;
-      resCpy.y = tmp;
-      
-      resCpy.x *= gravityFactor;
-      resCpy.y *= -gravityFactor;
+      resCpy.x *= -gravityFactor;
+      resCpy.y *= gravityFactor;
   
       // TODO adjust x y axis when the view flips upside down
     }
     else {
       // portrait view
-      resCpy.x *= -gravityFactor;
+      resCpy.x *= gravityFactor;
       resCpy.y *= -gravityFactor;
     }
     deviceMotionEvent.accelerationIncludingGravity = resCpy;
