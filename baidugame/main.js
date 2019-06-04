@@ -1,5 +1,3 @@
-const isSubContext = !swan.getOpenDataContext;
-
 window.boot = function () {
     var settings = window._CCSettings;
     window._CCSettings = undefined;
@@ -67,15 +65,6 @@ window.boot = function () {
         // load scene
         cc.director.loadScene(launchScene, null,
             function () {
-                if (cc.sys.isBrowser) {
-                    // show canvas
-                    var canvas = document.getElementById('GameCanvas');
-                    canvas.style.visibility = '';
-                    var div = document.getElementById('GameDiv');
-                    if (div) {
-                        div.style.backgroundImage = '';
-                    }
-                }
                 cc.loader.onProgress = null;
                 console.log('Success to load scene: ' + launchScene);
             }
@@ -95,6 +84,8 @@ window.boot = function () {
     else {
         jsList = [bundledScript];
     }
+
+    var isSubContext = (cc.sys.platform === cc.sys.BAIDU_GAME_SUB);
 
     var option = {
         id: 'GameCanvas',

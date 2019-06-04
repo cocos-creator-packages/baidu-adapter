@@ -65,9 +65,7 @@ Object.assign(game, {
         // Avoid setup to be called twice.
         if (this._rendererInitialized) return;
 
-        let el = this.config.id,
-            width, height,
-            localCanvas, localContainer;
+        let localCanvas, localContainer;
         
         this.container = localContainer = document.createElement("DIV");
         this.frame = localContainer.parentNode === document.body ? document.documentElement : localContainer.parentNode;
@@ -87,11 +85,9 @@ Object.assign(game, {
                 'stencil': true,
                 // MSAA is causing serious performance dropdown on some browsers.
                 'antialias': cc.macro.ENABLE_WEBGL_ANTIALIAS,
-                'alpha': cc.macro.ENABLE_TRANSPARENT_CANVAS
+                'alpha': cc.macro.ENABLE_TRANSPARENT_CANVAS,
+                'preserveDrawingBuffer': false,
             };
-            
-            opts['preserveDrawingBuffer'] = true;
-                
             renderer.initWebGL(localCanvas, opts);
             this._renderContext = renderer.device._gl;
             
@@ -107,84 +103,26 @@ Object.assign(game, {
             this._renderContext = renderer.device._ctx;
         }
 
-        this.canvas.oncontextmenu = function () {
-            if (!cc._isContextMenuEnable) return false;
-        };
-
         this._rendererInitialized = true;
     },
 
     _initEvents () {
-        var win = window, hiddenPropName;
-
         // register system events
-        if (this.config.registerSystemEvent)
+        if (this.config.registerSystemEvent) {
             inputManager.registerSystemEvent(this.canvas);
-
-        if (typeof document.hidden !== 'undefined') {
-            hiddenPropName = "hidden";
-        } else if (typeof document.mozHidden !== 'undefined') {
-            hiddenPropName = "mozHidden";
-        } else if (typeof document.msHidden !== 'undefined') {
-            hiddenPropName = "msHidden";
-        } else if (typeof document.webkitHidden !== 'undefined') {
-            hiddenPropName = "webkitHidden";
         }
-
-        var hidden = false;
 
         function onHidden () {
-            if (!hidden) {
-                hidden = true;
-                game.emit(game.EVENT_HIDE);
-            }
-        }
-        function onShown () {
-            if (hidden) {
-                hidden = false;
-                game.emit(game.EVENT_SHOW);
-            }
+            game.emit(game.EVENT_HIDE);
         }
 
-        if (hiddenPropName) {
-            var changeList = [
-                "visibilitychange",
-                "mozvisibilitychange",
-                "msvisibilitychange",
-                "webkitvisibilitychange",
-                "qbrowserVisibilityChange"
-            ];
-            for (var i = 0; i < changeList.length; i++) {
-                document.addEventListener(changeList[i], function (event) {
-                    var visible = document[hiddenPropName];
-                    // QQ App
-                    visible = visible || event["hidden"];
-                    if (visible)
-                        onHidden();
-                    else
-                        onShown();
-                });
-            }
-        } else {
-            win.addEventListener("blur", onHidden);
-            win.addEventListener("focus", onShown);
+        function onShown (res) {
+            game.emit(game.EVENT_SHOW, res);
         }
 
-        if (navigator.userAgent.indexOf("MicroMessenger") > -1) {
-            win.onfocus = onShown;
-        }
-
-        if (cc.sys.browserType !== cc.sys.BROWSER_TYPE_BAIDU_GAME_SUB) {
+        if (cc.sys.platform !== cc.sys.BAIDU_GAME_SUB) {
             swan.onShow && swan.onShow(onShown);
             swan.onHide && swan.onHide(onHidden);
-        }
-
-        if ("onpageshow" in window && "onpagehide" in window) {
-            win.addEventListener("pagehide", onHidden);
-            win.addEventListener("pageshow", onShown);
-            // Taobao UIWebKit
-            document.addEventListener("pagehide", onHidden);
-            document.addEventListener("pageshow", onShown);
         }
 
         this.on(game.EVENT_HIDE, function () {

@@ -2,56 +2,33 @@ const Audio = cc.Audio;
 
 if (Audio) {
     Object.assign(Audio.prototype, {
-        play () {
-            // marked as playing so it will playOnLoad
-            this._state = Audio.State.PLAYING;
-
+        _createElement () {
+            let elem = this._src._nativeAsset;
+            // Reuse dom audio element
             if (!this._element) {
-                return;
+                this._element = swan.createInnerAudioContext();
             }
-
-            this._bindEnded();
-            this._element.play();
+            this._element.src = elem.src;
         },
 
         destroy () {
-            this._element && this._element.destroy();
-
-            this._element = null;
+            if (this._element) {
+                this._element.destroy();
+                this._element = null;
+            }
         },
 
         setCurrentTime (num) {
-            if (this._element) {
-                this._nextTime = 0;
-            }
-            else {
+            if (!this._element) {
                 this._nextTime = num;
                 return;
             }
-
-            this._unbindEnded();
-            
-            this._bindEnded(function () {
-                this._bindEnded();
-            }.bind(this));
-
-            try {
-                this._element.currentTime = num;
-            }
-            catch (err) {
-                let _element = this._element;
-                if (_element.addEventListener) {
-                    let func = function () {
-                        _element.removeEventListener('loadedmetadata', func);
-                        _element.currentTime = num;
-                    };
-                    _element.addEventListener('loadedmetadata', func);
-                }
-            }
+            this._nextTime = 0;
+            this._element.seek(num);
         },
-
-        getState () {
-            return this._state;
-        },
+        
+        // adapt some special operations on web platform
+        _touchToPlay () { },
+        _forceUpdatingState () { },
     });
 }
