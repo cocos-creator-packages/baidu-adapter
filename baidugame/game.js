@@ -1,14 +1,14 @@
 require('./libs/adapter/builtin/index.js');
-require('./libs/adapter/engine/Device.js');  // provide device related infos
-__device.init(function () {
+require('./libs/adapter/engine/globalAdapter/index.js');
+window.__globalAdapter.init(function () {
     var Parser = require('./libs/xmldom/dom-parser.js');
     window.DOMParser = Parser.DOMParser;
-    require('./libs/swan-downloader.js');
     require('./src/settings.js');
     let settings = window._CCSettings;
-    require('main.js');
+    require('./main.js');
     require(settings.debug ? 'cocos2d-js.js' : 'cocos2d-js-min.js');
     require('./libs/adapter/engine/index.js');
+    require('./libs/swan-downloader');
 
     swanDownloader.REMOTE_SERVER_ROOT = "";
     swanDownloader.SUBCONTEXT_ROOT = "";
@@ -28,5 +28,6 @@ __device.init(function () {
         cc.macro.CLEANUP_IMAGE_CACHE = true;
     }
 
+    swanDownloader.init();
     window.boot();
 });
